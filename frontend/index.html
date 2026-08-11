@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SAP AI Test Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="bg-glow" aria-hidden="true">
+    <span class="glow glow-purple"></span>
+    <span class="glow glow-blue"></span>
+    <span class="glow glow-center"></span>
+  </div>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">SAP AI Test Agent</span>
+      </div>
+      <nav class="module-nav">
+        <button class="module-btn active" data-module="home">Home</button>
+        <button class="module-btn" data-module="procurement">Procurement</button>
+        <button class="module-btn" data-module="inventory">Inventory</button>
+        <button class="module-btn" disabled title="Coming next">Finance</button>
+        <button class="module-btn" data-module="abap">ABAP</button>
+        <button class="module-btn" data-module="rules">Rule Studio</button>
+      </nav>
+      <button id="run-btn" class="run-btn top-control hidden">Run Validation</button>
+    </div>
+    <div class="scope-bar top-control hidden">
+      <span class="scope-label">Validate specific POs</span>
+      <input id="scope-input" type="text" placeholder="e.g. PO00000001, PO00000003 — leave blank to validate everything" />
+      <button id="scope-run-btn" class="scope-run-btn">Validate Selected</button>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <section id="home-workspace" class="home-landing">
+      <div class="hero-eyebrow">SAP AI TEST AGENT</div>
+      <h1 class="hero-title">One workspace for SAP<br />testing, rules, and code</h1>
+      <p class="hero-subtitle">
+        Validate procurement and inventory data against your live SAP
+        database, generate business rules and test cases from plain
+        English, and review, optimize, or convert ABAP — all in one place.
+      </p>
+
+      <div class="home-grid">
+        <button class="home-card" data-module="procurement">
+          <span class="home-card-icon">◆</span>
+          <span class="home-card-title">Procurement</span>
+          <span class="home-card-desc">Validate PR → PO → GR → Invoice against real business rules, full or scoped to specific POs.</span>
+        </button>
+
+        <button class="home-card" data-module="inventory">
+          <span class="home-card-icon">▣</span>
+          <span class="home-card-title">Inventory</span>
+          <span class="home-card-desc">Check stock integrity, reorder levels, and movement history — full or filtered to specific materials/plants.</span>
+        </button>
+
+        <button class="home-card" data-module="abap">
+          <span class="home-card-icon">⌘</span>
+          <span class="home-card-title">ABAP Copilot</span>
+          <span class="home-card-desc">Review, optimize, convert across ABAP versions, or document ABAP code with AI.</span>
+        </button>
+
+        <button class="home-card" data-module="rules">
+          <span class="home-card-icon">✦</span>
+          <span class="home-card-title">Rule Studio</span>
+          <span class="home-card-desc">Generate business rules, SQL, Python checks, and test cases from plain English.</span>
+        </button>
+
+        <div class="home-card disabled">
+          <span class="home-card-badge">Coming Soon</span>
+          <span class="home-card-icon">▤</span>
+          <span class="home-card-title">Finance</span>
+          <span class="home-card-desc">Awaiting finance-specific data (GL, payment terms, aging) before this can check anything real.</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="hero" class="hero hidden">
+      <div class="hero-eyebrow">AI-POWERED SAP TESTING</div>
+      <h1 class="hero-title">Validate your procurement<br />data in seconds</h1>
+      <p class="hero-subtitle">
+        Run a full audit across every Purchase Requisition, Purchase Order,
+        Goods Receipt and Invoice — or check a handful of POs on demand.
+      </p>
+
+      <div class="hero-panel">
+        <button id="hero-run-btn" class="hero-run-btn">
+          <span class="hero-run-icon">▶</span> Run Full Validation
+        </button>
+
+        <div class="hero-divider"><span>or validate specific POs</span></div>
+
+        <div class="hero-scope-row">
+          <input id="hero-scope-input" type="text" placeholder="e.g. PO00000001, PO00000003" />
+          <button id="hero-scope-run-btn" class="hero-scope-run-btn">Validate</button>
+        </div>
+
+        <p id="hero-error" class="hero-error hidden"></p>
+      </div>
+
+      <div class="hero-stats">
+        <div><span>11</span><label>Business rules</label></div>
+        <div><span>5</span><label>Process checks</label></div>
+        <div><span>AI</span><label>Root-cause analysis</label></div>
+      </div>
+    </section>
+
+    <section id="empty-state" class="empty-state hidden">
+      <p>Run a validation pass to generate a live report from your SAP data.</p>
+    </section>
+
+    <section id="scope-banner" class="scope-banner hidden">
+      <span id="scope-banner-text"></span>
+      <button id="scope-clear-btn">Clear scope — run full validation</button>
+    </section>
+
+    <section id="report" class="report hidden">
+
+      <div class="metrics-grid" id="metrics-grid"></div>
+
+      <div class="panel-grid">
+
+        <div class="panel summary-panel">
+          <h2>Executive Summary</h2>
+          <p id="executive-summary"></p>
+          <div class="summary-stats">
+            <div><span id="stat-total">0</span><label>Total Checks</label></div>
+            <div class="pass"><span id="stat-passed">0</span><label>Passed</label></div>
+            <div class="fail"><span id="stat-failed">0</span><label>Failed</label></div>
+          </div>
+        </div>
+
+        <div class="panel risk-panel">
+          <h2>Risk Distribution</h2>
+          <div class="risk-chart-row">
+            <div id="risk-chart" class="risk-chart"></div>
+            <ul id="risk-legend" class="risk-legend"></ul>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Recommendations</h2>
+          <span id="rec-group-count" class="panel-subhead"></span>
+        </div>
+
+        <div class="table-controls">
+          <input id="rec-search-input" type="text" placeholder="Search recommendations…" />
+          <div class="severity-filters" id="rec-severity-filters">
+            <button class="sev-chip active" data-sev="ALL">All</button>
+            <button class="sev-chip" data-sev="CRITICAL">Critical</button>
+            <button class="sev-chip" data-sev="HIGH">High</button>
+            <button class="sev-chip" data-sev="MEDIUM">Medium</button>
+            <button class="sev-chip" data-sev="LOW">Low</button>
+          </div>
+        </div>
+
+        <div id="recommendations" class="recommendations"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Validation Results</h2>
+          <span id="results-count" class="panel-subhead"></span>
+        </div>
+
+        <div class="table-controls">
+          <input id="search-input" type="text" placeholder="Search rule, entity, or details…" />
+          <div class="severity-filters" id="severity-filters">
+            <button class="sev-chip active" data-sev="ALL">All</button>
+            <button class="sev-chip" data-sev="CRITICAL">Critical</button>
+            <button class="sev-chip" data-sev="HIGH">High</button>
+            <button class="sev-chip" data-sev="MEDIUM">Medium</button>
+            <button class="sev-chip" data-sev="LOW">Low</button>
+          </div>
+          <label class="show-passed">
+            <input id="show-passed" type="checkbox" />
+            Show passed checks
+          </label>
+        </div>
+
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Rule</th>
+              <th>Entity</th>
+              <th>Severity</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+
+        <div class="pagination" id="pagination"></div>
+      </div>
+
+    </section>
+
+    <section id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p id="loading-text">Running validations and generating AI recommendations…</p>
+    </section>
+
+    <section id="abap-workspace" class="abap-workspace hidden">
+
+      <div class="abap-header">
+        <h1 class="abap-title">ABAP Copilot</h1>
+        <p class="abap-subtitle">
+          Review, optimize, convert, or document ABAP code with AI —
+          review is based on general SAP/ABAP best practices, not your
+          company's specific standards.
+        </p>
+      </div>
+
+      <div class="abap-grid">
+
+        <div class="panel abap-input-panel">
+          <h2>ABAP Code</h2>
+          <textarea id="abap-code-input" class="abap-textarea" spellcheck="false" placeholder="Paste your ABAP code here…"></textarea>
+
+          <div class="abap-mode-select" id="abap-mode-select">
+            <button class="mode-chip active" data-mode="review">Review</button>
+            <button class="mode-chip" data-mode="optimize">Optimize</button>
+            <button class="mode-chip" data-mode="convert">Convert</button>
+            <button class="mode-chip" data-mode="document">Document</button>
+          </div>
+
+          <select id="abap-target-select" class="abap-target-select hidden">
+            <optgroup label="ABAP Versions">
+              <option value="abap_740">ABAP 7.40 (Inline Declarations)</option>
+              <option value="abap_750" selected>ABAP 7.50 (Table Expressions)</option>
+              <option value="abap_752">ABAP 7.52 (Latest On-Premise)</option>
+              <option value="abap_cloud">ABAP for Cloud (RAP-ready)</option>
+              <option value="abap_oo">ABAP Objects (OO Refactor)</option>
+            </optgroup>
+            <optgroup label="SAP Architecture">
+              <option value="rap">RAP (RESTful ABAP Programming Model)</option>
+              <option value="cds_view">CDS View</option>
+              <option value="amdp">AMDP</option>
+            </optgroup>
+            <optgroup label="Non-ABAP">
+              <option value="python">Python</option>
+              <option value="cap">CAP (Node.js / CDS)</option>
+            </optgroup>
+          </select>
+
+          <button id="abap-analyze-btn" class="hero-run-btn abap-analyze-btn">
+            <span class="hero-run-icon">▶</span> Analyze
+          </button>
+
+          <p id="abap-error" class="hero-error hidden"></p>
+
+          <p class="abap-disclaimer">
+            Grounded in public ABAP/SAP best practices only — not your
+            company's codebase or naming conventions. Validate findings
+            with a functional/technical consultant before acting on them.
+          </p>
+        </div>
+
+        <div class="panel abap-output-panel">
+          <div id="abap-empty" class="abap-empty">
+            <p>Paste ABAP code and click Analyze to see results here.</p>
+          </div>
+          <div id="abap-loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Analyzing ABAP code…</p>
+          </div>
+          <div id="abap-results" class="abap-results hidden"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="rule-workspace" class="abap-workspace hidden">
+
+      <div class="abap-header">
+        <h1 class="abap-title">AI Rule &amp; Test Case Generator</h1>
+        <p class="abap-subtitle">
+          Describe a validation in plain English — get a rule name, SQL,
+          a Python check, and positive/negative/boundary test cases back.
+          Save it straight to your rule library when it looks right.
+        </p>
+      </div>
+
+      <div class="abap-grid">
+
+        <div class="panel abap-input-panel">
+          <h2>Describe the Rule</h2>
+
+          <select id="rule-module-select" class="abap-target-select" style="margin-bottom:12px;">
+            <option value="PROCUREMENT">Module: Procurement</option>
+            <option value="INVENTORY">Module: Inventory</option>
+            <option value="FINANCE">Module: Finance</option>
+            <option value="GENERIC">Module: Generic / Other</option>
+          </select>
+
+          <textarea id="rule-description-input" class="abap-textarea" style="min-height:160px;" placeholder="e.g. Flag any invoice that duplicates another invoice for the same vendor and amount within 7 days"></textarea>
+
+          <button id="rule-generate-btn" class="hero-run-btn abap-analyze-btn">
+            <span class="hero-run-icon">▶</span> Generate Rule
+          </button>
+
+          <p id="rule-error" class="hero-error hidden"></p>
+
+          <p class="abap-disclaimer">
+            AI-generated rules are a starting point, not a verified SAP
+            business rule — review with a functional consultant before
+            relying on them.
+          </p>
+        </div>
+
+        <div class="panel abap-output-panel">
+          <div id="rule-empty" class="abap-empty">
+            <p>Describe a validation and click Generate to see the rule here.</p>
+          </div>
+          <div id="rule-loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Generating rule, SQL, and test cases…</p>
+          </div>
+          <div id="rule-results" class="abap-results hidden"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="inventory-workspace" class="inv-workspace hidden">
+
+      <div id="inv-intro" class="abap-header">
+        <h1 class="abap-title">Inventory Validation</h1>
+        <p class="abap-subtitle">
+          Checks stock data integrity, reserved-vs-current consistency,
+          reorder levels, and movement history across all plants — run a
+          full validation or filter to specific materials/plants below.
+        </p>
+      </div>
+
+      <div class="inv-toolbar">
+        <button id="inv-run-btn" class="hero-run-btn inv-run-btn">
+          <span class="hero-run-icon">▶</span> Run Inventory Validation
+        </button>
+      </div>
+
+      <div class="panel inv-scope-panel">
+        <h2>Validate Specific Materials / Plants</h2>
+        <div class="inv-scope-row">
+          <input id="inv-material-input" type="text" placeholder="Material name(s), comma-separated — leave blank for all" />
+          <input id="inv-plant-input" type="text" placeholder="Plant name(s), comma-separated — leave blank for all" />
+          <button id="inv-scope-run-btn" class="scope-run-btn">Validate Selected</button>
+        </div>
+      </div>
+
+      <section id="inv-scope-banner" class="scope-banner hidden">
+        <span id="inv-scope-banner-text"></span>
+        <button id="inv-scope-clear-btn">Clear scope — run full validation</button>
+      </section>
+
+      <div id="inv-empty" class="empty-state">
+        <p>Run a validation pass to generate a live inventory report.</p>
+      </div>
+
+      <div id="inv-loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p>Running inventory validations and generating AI recommendations…</p>
+      </div>
+
+      <div id="inv-report" class="report hidden">
+
+        <div class="metrics-grid" id="inv-metrics-grid"></div>
+
+        <div class="panel-grid">
+
+          <div class="panel summary-panel">
+            <h2>Executive Summary</h2>
+            <p id="inv-executive-summary"></p>
+            <div class="summary-stats">
+              <div><span id="inv-stat-total">0</span><label>Total Checks</label></div>
+              <div class="pass"><span id="inv-stat-passed">0</span><label>Passed</label></div>
+              <div class="fail"><span id="inv-stat-failed">0</span><label>Failed</label></div>
+            </div>
+          </div>
+
+          <div class="panel risk-panel">
+            <h2>Risk Distribution</h2>
+            <div class="risk-chart-row">
+              <div id="inv-risk-chart" class="risk-chart"></div>
+              <ul id="inv-risk-legend" class="risk-legend"></ul>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Recommendations</h2>
+            <span id="inv-rec-group-count" class="panel-subhead"></span>
+          </div>
+
+          <div class="table-controls">
+            <input id="inv-rec-search-input" type="text" placeholder="Search recommendations…" />
+            <div class="severity-filters" id="inv-rec-severity-filters">
+              <button class="sev-chip active" data-sev="ALL">All</button>
+              <button class="sev-chip" data-sev="CRITICAL">Critical</button>
+              <button class="sev-chip" data-sev="HIGH">High</button>
+              <button class="sev-chip" data-sev="MEDIUM">Medium</button>
+              <button class="sev-chip" data-sev="LOW">Low</button>
+            </div>
+          </div>
+
+          <div id="inv-recommendations" class="recommendations"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Validation Results</h2>
+            <span id="inv-results-count" class="panel-subhead"></span>
+          </div>
+
+          <div class="table-controls">
+            <input id="inv-search-input" type="text" placeholder="Search rule, entity, or details…" />
+            <div class="severity-filters" id="inv-severity-filters">
+              <button class="sev-chip active" data-sev="ALL">All</button>
+              <button class="sev-chip" data-sev="CRITICAL">Critical</button>
+              <button class="sev-chip" data-sev="HIGH">High</button>
+              <button class="sev-chip" data-sev="MEDIUM">Medium</button>
+              <button class="sev-chip" data-sev="LOW">Low</button>
+            </div>
+            <label class="show-passed">
+              <input id="inv-show-passed" type="checkbox" />
+              Show passed checks
+            </label>
+          </div>
+
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Rule</th>
+                <th>Entity</th>
+                <th>Severity</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="inv-results-body"></tbody>
+          </table>
+
+          <div class="pagination" id="inv-pagination"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

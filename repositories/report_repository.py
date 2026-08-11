@@ -1,0 +1,13 @@
+class ReportRepository(BaseRepository):
+
+    def procurement_summary(self):
+        ...
+
+    def inventory_summary(self):
+        ...
+
+    def finance_summary(self):
+        ...
+
+    def ai_summary(self):
+        ...
