@@ -157,10 +157,10 @@ def _extract_json(text: str) -> dict | None:
         return None
 
 
-def _abap_fallback(mode: str) -> dict:
+def _abap_fallback(mode: str, error: str | None = None) -> dict:
     return {
         "mode": mode,
-        "summary": (
+        "summary": error or (
             "AI analysis requires GROQ_API_KEY to be set. Add it to your "
             ".env file to enable ABAP review, optimization, conversion, "
             "and documentation."
@@ -173,9 +173,15 @@ def _abap_fallback(mode: str) -> dict:
     }
 
 
-def _call_json(prompt: str, system_context: str | None = None, max_tokens: int = 2000) -> dict | None:
+def _call_json(prompt: str, system_context: str | None = None, max_tokens: int = 2000) -> tuple[dict | None, str | None]:
+    """
+    Returns (result, error). error is None on success. Distinguishing
+    "key never configured" from "key configured but the call failed"
+    matters - they need different fixes, and showing the wrong one
+    wastes time chasing a problem that doesn't exist.
+    """
     if _client is None:
-        return None
+        return None, "GROQ_API_KEY is not set on this server."
 
     messages = []
     if system_context:
@@ -189,12 +195,18 @@ def _call_json(prompt: str, system_context: str | None = None, max_tokens: int =
             temperature=0.2,
             max_tokens=max_tokens,
         )
-        return _extract_json(response.choices[0].message.content)
-    except Exception:
-        return None
+        content = response.choices[0].message.content
+        parsed = _extract_json(content)
+        if parsed is None:
+            print(f"[WARN] Groq response was not valid JSON. Raw content: {content[:500]!r}")
+            return None, "The AI response could not be parsed as JSON (see server logs for the raw response)."
+        return parsed, None
+    except Exception as exc:
+        print(f"[WARN] Groq API call failed: {exc!r}")
+        return None, f"Groq API call failed: {exc}"
 
 
-def _call_abap_json(prompt: str, max_tokens: int = 2000) -> dict | None:
+def _call_abap_json(prompt: str, max_tokens: int = 2000) -> tuple[dict | None, str | None]:
     return _call_json(prompt, _ABAP_SYSTEM_CONTEXT, max_tokens)
 
 
@@ -217,7 +229,8 @@ def analyze_abap(code: str, mode: str, target: str | None = None) -> dict:
             '"title": "short title", "description": "1-2 sentences"}]}\n\n'
             f"ABAP code:\n```\n{code}\n```"
         )
-        result = _call_abap_json(prompt) or _abap_fallback(mode)
+        result, error = _call_abap_json(prompt)
+        result = result or _abap_fallback(mode, error)
 
     elif mode == "optimize":
         prompt = (
@@ -233,7 +246,8 @@ def analyze_abap(code: str, mode: str, target: str | None = None) -> dict:
             'with \\n for newlines"}\n\n'
             f"ABAP code:\n```\n{code}\n```"
         )
-        result = _call_abap_json(prompt, max_tokens=3000) or _abap_fallback(mode)
+        result, error = _call_abap_json(prompt, max_tokens=3000)
+        result = result or _abap_fallback(mode, error)
 
     elif mode == "convert":
         target_label = {
@@ -270,7 +284,7 @@ def analyze_abap(code: str, mode: str, target: str | None = None) -> dict:
             '\\n for newlines"}\n\n'
             f"ABAP code:\n```\n{code}\n```"
         )
-        raw = _call_abap_json(prompt, max_tokens=3000)
+        raw, error = _call_abap_json(prompt, max_tokens=3000)
         if raw:
             result = {
                 "mode": mode,
@@ -284,7 +298,7 @@ def analyze_abap(code: str, mode: str, target: str | None = None) -> dict:
                 "explanation": raw.get("explanation"),
             }
         else:
-            result = _abap_fallback(mode)
+            result = _abap_fallback(mode, error)
 
     elif mode == "document":
         prompt = (
@@ -302,7 +316,8 @@ def analyze_abap(code: str, mode: str, target: str | None = None) -> dict:
             '{"step": "..."}]}}\n\n'
             f"ABAP code:\n```\n{code}\n```"
         )
-        result = _call_abap_json(prompt) or _abap_fallback(mode)
+        result, error = _call_abap_json(prompt)
+        result = result or _abap_fallback(mode, error)
 
     else:
         return {
@@ -352,11 +367,11 @@ _RULE_SYSTEM_CONTEXT = (
 )
 
 
-def _rule_fallback() -> dict:
+def _rule_fallback(error: str | None = None) -> dict:
     return {
         "rule_name": "GENERATED_RULE",
         "severity": "MEDIUM",
-        "description": (
+        "description": error or (
             "AI generation requires GROQ_API_KEY to be set. Add it to your "
             ".env file to enable rule generation."
         ),
@@ -400,7 +415,8 @@ def generate_rule(description: str, module: str) -> dict:
         "BOUNDARY case)}"
     )
 
-    result = _call_json(prompt, _RULE_SYSTEM_CONTEXT, max_tokens=2000) or _rule_fallback()
+    result, error = _call_json(prompt, _RULE_SYSTEM_CONTEXT, max_tokens=2000)
+    result = result or _rule_fallback(error)
 
     result.setdefault("rule_name", "GENERATED_RULE")
     result.setdefault("severity", "MEDIUM")
