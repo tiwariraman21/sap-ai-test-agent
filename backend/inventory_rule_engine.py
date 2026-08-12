@@ -20,7 +20,7 @@ Project: SAP AI Test Agent
 from __future__ import annotations
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 import models
 
@@ -68,7 +68,10 @@ def scoped_inventory(
     and/or plants (case-insensitive, matched by name). Fetched once
     and reused across every check.
     """
-    query = db.query(models.Inventory)
+    query = db.query(models.Inventory).options(
+        joinedload(models.Inventory.material),
+        joinedload(models.Inventory.plant),
+    )
 
     if material_names:
         query = query.join(models.Material).filter(

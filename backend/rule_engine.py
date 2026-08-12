@@ -28,7 +28,7 @@ Project: SAP AI Test Agent
 from __future__ import annotations
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 import models
 
@@ -67,7 +67,12 @@ def _normalize_po_numbers(po_numbers: list[str] | None) -> list[str] | None:
 
 
 def _scoped_pos(db: Session, po_numbers: list[str] | None):
-    query = db.query(models.PurchaseOrder)
+    query = db.query(models.PurchaseOrder).options(
+        joinedload(models.PurchaseOrder.vendor),
+        selectinload(models.PurchaseOrder.items),
+        joinedload(models.PurchaseOrder.purchase_requisition),
+        selectinload(models.PurchaseOrder.goods_receipts).selectinload(models.GoodsReceipt.items),
+    )
     if po_numbers:
         query = query.filter(func.upper(models.PurchaseOrder.po_number).in_(po_numbers))
     return query.all()
@@ -85,11 +90,15 @@ def validate_purchase_requisitions(db: Session, po_numbers: list[str] | None = N
         pr_ids = {po.pr_id for po in pos if po.pr_id is not None}
         if not pr_ids:
             return results
-        prs = db.query(models.PurchaseRequisition).filter(
+        prs = db.query(models.PurchaseRequisition).options(
+            selectinload(models.PurchaseRequisition.items)
+        ).filter(
             models.PurchaseRequisition.id.in_(pr_ids)
         ).all()
     else:
-        prs = db.query(models.PurchaseRequisition).all()
+        prs = db.query(models.PurchaseRequisition).options(
+            selectinload(models.PurchaseRequisition.items)
+        ).all()
 
     for pr in prs:
 
@@ -166,7 +175,10 @@ def validate_goods_receipts(db: Session, po_numbers: list[str] | None = None) ->
     if po_numbers:
         pos = _scoped_pos(db, po_numbers)
     else:
-        pos = db.query(models.PurchaseOrder).filter(
+        pos = db.query(models.PurchaseOrder).options(
+            selectinload(models.PurchaseOrder.items),
+            selectinload(models.PurchaseOrder.goods_receipts).selectinload(models.GoodsReceipt.items),
+        ).filter(
             models.PurchaseOrder.status.ilike("open")
             | models.PurchaseOrder.status.ilike("released")
         ).all()
@@ -218,16 +230,23 @@ def validate_goods_receipts(db: Session, po_numbers: list[str] | None = None) ->
 def validate_invoices(db: Session, po_numbers: list[str] | None = None) -> list[dict]:
     results = []
 
+    invoice_options = [
+        joinedload(models.Invoice.vendor),
+        joinedload(models.Invoice.gr)
+            .joinedload(models.GoodsReceipt.po)
+            .selectinload(models.PurchaseOrder.items),
+    ]
+
     if po_numbers:
         pos = _scoped_pos(db, po_numbers)
         gr_ids = {gr.id for po in pos for gr in po.goods_receipts}
         if not gr_ids:
             return results
-        invoices = db.query(models.Invoice).filter(
+        invoices = db.query(models.Invoice).options(*invoice_options).filter(
             models.Invoice.gr_id.in_(gr_ids)
         ).all()
     else:
-        invoices = db.query(models.Invoice).all()
+        invoices = db.query(models.Invoice).options(*invoice_options).all()
 
     for invoice in invoices:
 
@@ -269,7 +288,9 @@ def validate_invoices(db: Session, po_numbers: list[str] | None = None) -> list[
 def validate_inventory_reorder(db: Session) -> list[dict]:
     results = []
 
-    low_stock = db.query(models.Inventory).filter(
+    low_stock = db.query(models.Inventory).options(
+        joinedload(models.Inventory.material)
+    ).filter(
         models.Inventory.available_stock <= models.Inventory.reorder_level
     ).all()
 
