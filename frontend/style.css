@@ -115,7 +115,7 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0;
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 15px;
