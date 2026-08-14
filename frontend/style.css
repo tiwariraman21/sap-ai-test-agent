@@ -126,6 +126,22 @@ body {
   color: var(--accent);
 }
 
+/* InfraBeat wordmark — CSS-only recreation of the company logo
+   (teal "Infra" + red "Beat"). Uses a bold rounded sans rather
+   than the site's mono/UI fonts to match the logo's letterforms;
+   falls back cleanly to Inter if Poppins isn't loaded. */
+
+.brand-infra,
+.brand-beat {
+  font-family: 'Poppins', 'Montserrat', var(--font-ui), sans-serif;
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.brand-infra { color: #1595c7; }
+.brand-beat  { color: #ea1d2c; }
+
 .module-nav {
   display: flex;
   gap: 4px;
