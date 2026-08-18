@@ -72,7 +72,7 @@ def generate_recommendation(failed_result: dict) -> str:
 
     try:
         response = _client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=200,
@@ -111,7 +111,7 @@ def generate_executive_summary(results: list[dict]) -> str:
 
     try:
         response = _client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=250,
@@ -190,7 +190,7 @@ def _call_json(prompt: str, system_context: str | None = None, max_tokens: int =
 
     try:
         response = _client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0.2,
             max_tokens=max_tokens,
